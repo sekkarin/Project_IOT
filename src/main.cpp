@@ -38,7 +38,7 @@
 // Feather HUZZAH ESP8266 note: use pins 3, 4, 5, 12, 13 or 14 --
 // Pin 15 can work but DHT must be disconnected during program upload.
 // Update these with values suitable for your network.
-// wif setting
+
 #define DHTTYPE DHT11 // DHT 11
 
 #define MSG_BUFFER_SIZE (50)
@@ -230,6 +230,7 @@ void loop()
 
   }
 }
+
 void call_funtion(String my_topic, String msg)
 {
   if (my_topic == "led1")
@@ -257,33 +258,3 @@ void call_funtion(String my_topic, String msg)
     }
   }
 }
-// class temp : public DHT
-// {
-
-// public:
-//   int DHTPIN = 0;
-//   int DHTTYPE = 0;
-//   temp(uint8_t pin, uint8_t type, uint8_t count = 6) : DHT(uint8_t pin, uint8_t type, uint8_t count = 6);
-//   temp dht(DHTPIN, DHTTYPE);
-//   dht.begin();
-//   void init_dht_11()
-//   {
-//   }
-//   // Reading temperature or humidity takes about 250 milliseconds!
-//   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-//   void read_Humidity()
-//   {
-//     float h = dht.readHumidity();
-//     return h;
-//   }
-//   void read_Temperature()
-//   {
-//     float t = dht.readTemperature();
-//     return t;
-//   }
-//   void read_temperature_Fahrenheit()
-//   {
-//     float f = dht.readTemperature(true);
-//     return f;
-//   }
-// };

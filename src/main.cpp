@@ -32,6 +32,7 @@
 #include "test.h"
 #include "DHT.h"
 #include <Adafruit_Sensor.h>
+#include "RTClib.h"
 
 // Zone use macro
 #define DHTPIN D3 // Digital pin connected to the DHT sensor
@@ -50,24 +51,32 @@ const char *password = "125478963";
 const char *mqtt_server = "test.mosquitto.org";
 
 unsigned long lastMsg = 0;
+unsigned long lastCallfun = 0;
 
 int led_1 = D4;
 int led_2 = D5;
+
+int settime = 10;
+
+bool led_1_status = false;
+bool led_2_status = false;
+
+bool mode = false;
+
 // #define DHTTYPE DHT11 // DHT 11
 // #define DHTPIN D3     // Digital pin connected to the DHT sensor
 char msg[MSG_BUFFER_SIZE];
 char temp_[MSG_BUFFER_SIZE];
 char index_temp[MSG_BUFFER_SIZE];
 
-int value = 0;
-
 // instand object
 WiFiClient espClient;
 PubSubClient client(espClient);
 DHT dht(DHTPIN, DHTTYPE);
+RTC_DS1307 rtc;
 
 // Passing by reference and Passing by value
-void call_funtion(String my_topic, String msg);
+void call_funtion(String, String);
 
 // setup wifi
 void setup_wifi()
@@ -120,6 +129,7 @@ void callback(char *topic, byte *payload, unsigned int length)
     Serial.println(my_Topic);
   }
 
+  // call_funtion(my_Topic, msg);
   call_funtion(my_Topic, msg);
 }
 
@@ -175,7 +185,23 @@ void setup()
   // DHT 11 setup
   dht.begin();
   // setup_time();
-  ///////////////////////////
+  if (!rtc.begin())
+  {
+    Serial.println("Couldn't find RTC");
+    Serial.flush();
+    abort();
+  }
+
+  if (!rtc.isrunning())
+  {
+    Serial.println("RTC is NOT running, let's set the time!");
+    // When time needs to be set on a new device, or after a power loss, the
+    // following line sets the RTC to the date & time this sketch was compiled
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // This line sets the RTC with an explicit date & time, for example to set
+    // January 21, 2014 at 3am you would call:
+    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+  }
 }
 
 // loop funtion
@@ -192,10 +218,9 @@ void loop()
   // delay without dalay use time count in deloay
   unsigned long now = millis();
 
-  if (now - lastMsg > 2000)
+  if (now - lastMsg > 5000)
   {
     lastMsg = now;
-    ++value;
 
     // read value from method
     float h = dht.readHumidity();
@@ -227,34 +252,97 @@ void loop()
     client.publish("Data_Sensor/Humidity", msg);
     client.publish("Data_Sensor/Temperature", temp_);
     client.publish("Data_Sensor/Index_temp", index_temp);
+  }
+  if (now - lastCallfun > 1000)
+  {
+    char msg[MSG_BUFFER_SIZE];
+    lastCallfun = now;
 
+    if (mode)
+    {
+      // mode manual
+      snprintf(msg, MSG_BUFFER_SIZE, "%s", "Mode manual");
+      if (led_1_status)
+      {
+        digitalWrite(led_1, led_1_status);
+      }
+      else
+      {
+        digitalWrite(led_1, led_1_status);
+      }
+      if (led_2_status)
+      {
+        digitalWrite(led_2, led_2_status);
+      }
+      else
+      {
+        digitalWrite(led_2, led_2_status);
+      }
+    }
+    else if (!mode)
+    {
+      snprintf(msg, MSG_BUFFER_SIZE, "%s", "Mode auto");
+      // mode auto
+      DateTime now_ = rtc.now();
+      // Serial.println(now_.minute());
+      // Serial.println(now_.second());
+      if (now_.hour() == 6 and now_.minute() <= 10)
+      {
+        digitalWrite(led_1,HIGH);
+        digitalWrite(led_2,HIGH);
+
+      }
+      else if (now_.hour() == 17 and now_.minute() <= 10)
+      {
+        digitalWrite(led_1,HIGH);
+        digitalWrite(led_2,HIGH);
+      }else{
+        digitalWrite(led_1,LOW);
+        digitalWrite(led_2,LOW);
+      }
+    }
+    client.publish("Data_Sensor/mode_status", msg);
   }
 }
 
 void call_funtion(String my_topic, String msg)
 {
+
   if (my_topic == "led1")
   {
     if (msg == "on")
     {
-      digitalWrite(led_1, HIGH); 
-      Serial.println("print on");
+      led_1_status = true;
     }
     else if (msg == "off")
     {
-      digitalWrite(led_1, LOW);
-      Serial.println("print LOW");
+      led_1_status = false;
     }
   }
+
   if (my_topic == "led2")
   {
     if (msg == "on")
     {
-      digitalWrite(led_2, HIGH);
+      led_2_status = true;
     }
     else if (msg == "off")
     {
-      digitalWrite(led_2, LOW);
+      led_2_status = false;
+    }
+  }
+
+  if (my_topic == "mode")
+  {
+    if (msg == "auto")
+    {
+      Serial.println("Mode auto");
+      mode = false;
+    }
+    else if (msg == "manual")
+    {
+      Serial.println("Mode manual");
+      mode = true;
     }
   }
 }

@@ -75,7 +75,7 @@ PubSubClient client(espClient);
 DHT dht(DHTPIN, DHTTYPE);
 RTC_DS1307 rtc;
 
-// Passing by reference and Passing by value
+
 void call_funtion(String, String);
 
 // setup wifi
@@ -205,7 +205,6 @@ void setup()
 }
 
 // loop funtion
-
 void loop()
 {
   // check connection

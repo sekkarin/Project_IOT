@@ -52,10 +52,11 @@ const char *mqtt_server = "test.mosquitto.org";
 
 unsigned long lastMsg = 0;
 unsigned long lastCallfun = 0;
+unsigned long lastTime_water = 0;
 
 int led_1 = D4;
 int led_2 = D5;
-
+int Soil_Moisture = 0;
 int settime = 10;
 
 bool led_1_status = false;
@@ -74,7 +75,6 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 DHT dht(DHTPIN, DHTTYPE);
 RTC_DS1307 rtc;
-
 
 void call_funtion(String, String);
 
@@ -191,7 +191,7 @@ void setup()
     Serial.flush();
     abort();
   }
-
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   if (!rtc.isrunning())
   {
     Serial.println("RTC is NOT running, let's set the time!");
@@ -233,24 +233,24 @@ void loop()
     }
 
     float hic = dht.computeHeatIndex(t, h, false);
+    Soil_Moisture = map(analogRead(A0), 1024, 0, 0, 100);
     // snprintf เป็น function สําหรับ ใส่ String ในตัวแปร ตาม format ที่กําหนด และ การระบุ buffer ข้อความ
     // int snprintf(char *, size_t, const char *, ...)
     snprintf(msg, MSG_BUFFER_SIZE, "%.2f", h);
-    snprintf(temp_, MSG_BUFFER_SIZE, "%.2f", t);
-    snprintf(index_temp, MSG_BUFFER_SIZE, "%.2f", hic);
-
-    // snprintf(msg, MSG_BUFFER_SIZE, "hello world" );
-
-    // Serial.print("Publish message: ");
-    Serial.print(msg);
-    Serial.print(temp_);
-    Serial.print(hic);
-    Serial.println();
-
-    // public data
+    // Serial.print(msg);
     client.publish("Data_Sensor/Humidity", msg);
+
+    snprintf(temp_, MSG_BUFFER_SIZE, "%.2f", t);
+    // Serial.print(temp_);
     client.publish("Data_Sensor/Temperature", temp_);
+
+    snprintf(index_temp, MSG_BUFFER_SIZE, "%.2f", hic);
+    // Serial.print(hic);
     client.publish("Data_Sensor/Index_temp", index_temp);
+
+    snprintf(msg, MSG_BUFFER_SIZE, "%d", Soil_Moisture);
+    // Serial.println(msg);
+    client.publish("Data_Sensor/Soil_Moisture", msg);
   }
   if (now - lastCallfun > 1000)
   {
@@ -283,21 +283,33 @@ void loop()
       snprintf(msg, MSG_BUFFER_SIZE, "%s", "Mode auto");
       // mode auto
       DateTime now_ = rtc.now();
+      // if (Soil_Moisture <= 55)
+      // {
+      //   if (now - lastTime_water = > 600000)
+      //   {
+      //     lastTime_water = now;
+
+      //   }
+      // }
       // Serial.println(now_.minute());
       // Serial.println(now_.second());
-      if (now_.hour() == 6 and now_.minute() <= 10)
+      if ((now_.hour() == 6 and now_.minute() <= 10) and Soil_Moisture <= 55)
+      // if (now_.hour() == 6 and now_.minute() <= 20)
       {
-        digitalWrite(led_1,HIGH);
-        digitalWrite(led_2,HIGH);
-
+        digitalWrite(led_1, HIGH);
+        digitalWrite(led_2, HIGH);
       }
-      else if (now_.hour() == 17 and now_.minute() <= 10)
+      else if ((now_.hour() == 17 and now_.minute() <= 50) and Soil_Moisture <= 55)
+      // else if (now_.hour() == 17 and now_.minute() <= 20)
       {
-        digitalWrite(led_1,HIGH);
-        digitalWrite(led_2,HIGH);
-      }else{
-        digitalWrite(led_1,LOW);
-        digitalWrite(led_2,LOW);
+        Serial.println("work");
+        digitalWrite(led_1, HIGH);
+        digitalWrite(led_2, HIGH);
+      }
+      else
+      {
+        digitalWrite(led_1, LOW);
+        digitalWrite(led_2, LOW);
       }
     }
     client.publish("Data_Sensor/mode_status", msg);
